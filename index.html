@@ -28670,6 +28670,13 @@ function showGenrePopup(genre) {
       return stripeClientPromise;
     }
 
+    // hz-streams.com is served as a static site (no serverless backend of its own),
+    // so subscription requests must go to this dedicated Stripe API deployment instead.
+    // This only applies when running on that exact production origin with no explicit
+    // override, so local dev (localhost:3010) and any future HERTZ_API_BASE/localStorage
+    // override behave exactly as before.
+    const HZ_STREAMS_PRODUCTION_API_FALLBACK = 'https://hz-streams-subscriptions-api.vercel.app';
+
     function getSubscriptionsApiBaseUrl() {
       const runtimeConfiguredBase =
         (window.HERTZ_API_BASE && String(window.HERTZ_API_BASE).trim()) ||
@@ -28681,6 +28688,10 @@ function showGenrePopup(genre) {
 
       if (window.location.protocol === 'file:') {
         return 'http://localhost:3010';
+      }
+
+      if (window.location.origin === 'https://hz-streams.com') {
+        return HZ_STREAMS_PRODUCTION_API_FALLBACK;
       }
 
       return window.location.origin;
@@ -28706,6 +28717,9 @@ function showGenrePopup(genre) {
       if (window.location.protocol === 'file:') {
         pushCandidate('http://localhost:3010');
       } else {
+        if (window.location.origin === 'https://hz-streams.com') {
+          pushCandidate(HZ_STREAMS_PRODUCTION_API_FALLBACK);
+        }
         pushCandidate(window.location.origin);
       }
 
