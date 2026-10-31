@@ -10760,7 +10760,7 @@ last i checked this is best, specially since it could be real safe`;
                 <div class="recent-track-time">Just now</div>
                 <div class="recent-track-actions"><button class="track-like-btn" onclick="toggleLike(this, event)">♡</button><button class="track-menu-btn" onclick="showTrackMenu(event)">⋯</button></div>
               </div>
-              <div class="recent-track-item" onclick="playNewTrack('Scarred or Dead', 'https://storage.googleapis.com/hertz-music-folder/Scarred%20or%20Dead%20(6).mp3', 'Scarred or Dead', 'Ben.I.Am Tedla');" style="cursor: pointer; background: rgba(255,215,0,0.05); border-left: 3px solid gold;">
+              <div class="recent-track-item" onclick="playNewTrack('Scarred or Dead', 'https://storage.googleapis.com/hertz-music-folder/Scarred%20or%20Dead%20(6).mp3', 'Scarred or Dead', 'Ben.I.Am Tedla');" style="cursor: pointer;">
                 <div class="recent-track-artwork"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80" alt="Scarred or Dead cover" style="width:40px;height:40px;border-radius:4px;object-fit:cover;"></div>
                 <div class="recent-track-info">
                   <div class="recent-track-name">Scarred or Dead</div>
@@ -13934,7 +13934,12 @@ Oh wow uh yea`
             if (!lyricLines.length) return;
 
             const playerAudio = document.getElementById('playerAudio');
-            const isTrackPlaying = () => !!playerAudio && !playerAudio.paused && !playerAudio.ended;
+            const pl25PlayerAudioForScroll = document.getElementById('pl25PlayerAudio');
+            const isTrackPlaying = () => {
+              const mainPlaying = !!playerAudio && !playerAudio.paused && !playerAudio.ended;
+              const pl25Playing = !!pl25PlayerAudioForScroll && !pl25PlayerAudioForScroll.paused && !pl25PlayerAudioForScroll.ended;
+              return mainPlaying || pl25Playing;
+            };
 
             if (panelBody.dataset.lyricsUserScrolling !== 'true') {
               panelBody.scrollTop = 0;
@@ -16210,6 +16215,14 @@ Dis shit needs to end, only way it happens is if creeps are dead`;
           </div>
           <div class="app-selection-arrow">›</div>
         </div>
+        <div class="app-selection-item" onclick="openPlaylistApp()">
+          <div class="app-selection-icon playlist">📋</div>
+          <div class="app-selection-info">
+            <div class="app-selection-name">Playlist</div>
+            <div class="app-selection-description">Browse artist albums and play tracks</div>
+          </div>
+          <div class="app-selection-arrow">›</div>
+        </div>
       </div>
     </div>
   </div>
@@ -16275,6 +16288,267 @@ Dis shit needs to end, only way it happens is if creeps are dead`;
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Playlist popup styles (scoped with pl25- prefix to avoid affecting any existing styles) -->
+  <style>
+    .pl25-artist-popup-modal {
+      display: none;
+      position: fixed;
+      z-index: 3700;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.9);
+    }
+    .pl25-artist-popup-content {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(255,215,0,0.3);
+      padding: 2rem;
+      max-width: 700px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 2px solid gold;
+    }
+    .pl25-artist-popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #404040;
+    }
+    .pl25-artist-popup-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: gold;
+      text-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    }
+    .pl25-artist-popup-close {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      line-height: 1;
+    }
+    .pl25-artist-popup-close:hover { color: gold; }
+    .pl25-artist-tracks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1.5rem;
+      justify-items: center;
+    }
+    .pl25-artist-track-card {
+      background: #232526;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 120px;
+    }
+    .pl25-artist-track-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 16px rgba(255,215,0,0.3);
+    }
+    .pl25-artist-track-card img {
+      width: 80px;
+      height: 80px;
+      border-radius: 12px;
+      margin-bottom: 0.7rem;
+      object-fit: cover;
+      box-shadow: 0 2px 8px rgba(255,215,0,0.3);
+      border: 2px solid gold;
+    }
+    .pl25-artist-track-name {
+      font-weight: 600;
+      color: #fff;
+      font-size: 0.95rem;
+      text-align: center;
+      word-wrap: break-word;
+      width: 100%;
+    }
+    .pl25-sticky-player {
+      position: fixed !important;
+      left: 50% !important;
+      bottom: 88px !important;
+      transform: translateX(-50%) !important;
+      z-index: 3800;
+      background: rgba(18, 18, 18, 0.95) !important;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 -2px 15px rgba(0,0,0,0.2);
+      border-radius: 14px;
+      padding: 3px 10px !important;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #fff;
+      min-width: 320px;
+      max-width: 480px;
+      width: 88vw !important;
+      border: 2px solid #0a174e;
+    }
+    .pl25-sticky-player .pl25-player-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 2px 8px;
+      width: 100%;
+      max-width: 340px;
+    }
+    .pl25-sticky-player .pl25-player-btn {
+      background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(255,215,0,0.18);
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .pl25-sticky-player .pl25-player-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 4px 12px rgba(255,215,0,0.25);
+    }
+    .pl25-sticky-player .pl25-player-title {
+      font-weight: 700;
+      font-size: 0.75rem;
+      color: #FFD700;
+      text-align: center !important;
+      margin: 0;
+      width: 100%;
+      display: block;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .pl25-sticky-player #pl25ProgressBar {
+      accent-color: #FFD700;
+      height: 5px;
+      border-radius: 5px;
+      background: #232526;
+      width: 100%;
+      cursor: pointer;
+    }
+    .pl25-sticky-player #pl25LikeBtn {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.4);
+      transition: all 0.2s ease;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pl25-sticky-player #pl25LikeBtn.liked { color: #FFD700 !important; }
+    .pl25-sticky-player #pl25LyricsBtn {
+      font-size: 1rem;
+      color: #FFD700;
+      transition: all 0.2s ease;
+      background: rgba(255,215,0,0.08);
+      border: 1px solid rgba(255,215,0,0.25);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      box-shadow: none;
+    }
+    .pl25-sticky-player #pl25LyricsBtn:hover,
+    .pl25-sticky-player #pl25LyricsBtn.active {
+      color: #121212;
+      background: #FFD700;
+      box-shadow: 0 4px 12px rgba(255,215,0,0.25);
+    }
+    @media (max-width: 600px) {
+      .pl25-sticky-player { min-width: 280px; max-width: 95vw; width: 92vw; }
+    }
+  </style>
+
+  <!-- Playlist: Artist Albums Popup (ported from Playlist25App.html) -->
+  <div class="app-selection-overlay" id="pl25AppOverlay" style="display:none; z-index:3500;">
+    <div style="background:#121212;border-radius:16px;width:92vw;max-width:900px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.85);border:1px solid #333;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#1a1a1a 0%,#252525 100%);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <span style="font-size:1.3rem;">📋</span>
+          <span style="color:#fff;font-size:1.15rem;font-weight:700;">Playlist</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <button onclick="closePlaylistApp(); document.getElementById('appSelectionOverlay').style.display='flex';" style="background:rgba(255,255,255,0.07);border:1px solid #444;color:#b3b3b3;font-size:0.85rem;cursor:pointer;padding:6px 12px;border-radius:20px;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.color='#b3b3b3'">← Back</button>
+          <button onclick="closePlaylistApp()" style="background:transparent;border:none;color:#a7a7a7;font-size:1.8rem;cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#a7a7a7'">×</button>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:1.5rem;">
+        <h2 style="text-align:center;color:gold;font-size:1.5rem;margin-bottom:1.5rem;font-weight:bold;">Artist Albums</h2>
+        <div id="pl25ArtistFoldersGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.3rem;justify-items:center;padding:0.5rem;min-height:150px;">
+          <!-- Artist/album folders rendered here by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playlist: Artist/Album track popup (nested track list) -->
+  <div id="pl25ArtistPopupModal" class="pl25-artist-popup-modal">
+    <div class="pl25-artist-popup-content">
+      <div class="pl25-artist-popup-header">
+        <div class="pl25-artist-popup-title" id="pl25ArtistPopupTitle">Album</div>
+        <button class="pl25-artist-popup-close" id="pl25CloseArtistPopup">&times;</button>
+      </div>
+      <div class="pl25-artist-tracks-grid" id="pl25ArtistTracksGrid">
+        <!-- Tracks rendered here by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Playlist: dedicated mini player (self-contained, does not affect the app's main sticky player) -->
+  <div class="pl25-sticky-player" id="pl25StickyPlayer" style="display:none;">
+    <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin-bottom:1px;">
+      <div style="display:flex;justify-content:center;align-items:center;margin-bottom:1px;">
+        <span id="pl25CurrentTime" style="font-size:0.7rem;color:#FFD700;font-weight:700;">0:00</span>
+        <span style="margin:0 2px;color:#fff;font-weight:500;">/</span>
+        <span id="pl25Duration" style="font-size:0.7rem;color:#FFD700;font-weight:700;">0:00</span>
+      </div>
+      <div style="width:100%;text-align:center;">
+        <span class="pl25-player-title" id="pl25PlayerTrackTitle" style="font-size:0.75rem;margin:0;"></span>
+      </div>
+    </div>
+    <div style="width:100%;margin-bottom:2px;">
+      <input type="range" id="pl25ProgressBar" min="0" max="100" value="0" step="0.1" style="width:100%;margin:0;">
+    </div>
+    <div class="pl25-player-controls">
+      <button class="pl25-player-btn" id="pl25ShuffleBtn" title="Shuffle" style="width:28px;height:28px;font-size:0.9rem;">&#128256;</button>
+      <button class="pl25-player-btn" id="pl25PrevBtn" title="Previous" style="width:38px;height:38px;font-size:1.2rem;">&#9198;</button>
+      <button class="pl25-player-btn" id="pl25PlayPauseBtn" title="Play/Pause" style="width:42px;height:42px;font-size:1.4rem;">&#9654;</button>
+      <button class="pl25-player-btn" id="pl25NextBtn" title="Next" style="width:38px;height:38px;font-size:1.2rem;">&#9197;</button>
+      <button class="pl25-player-btn" id="pl25LoopBtn" title="Loop" style="width:28px;height:28px;font-size:0.9rem;">&#128257;</button>
+      <button class="pl25-player-btn" id="pl25LikeBtn" title="Like" style="background:none;box-shadow:none;width:28px;height:28px;font-size:1.1rem;">&#10084;</button>
+      <button id="pl25LyricsBtn" title="Lyrics" aria-label="Show lyrics">📝</button>
+    </div>
+    <audio id="pl25PlayerAudio"></audio>
   </div>
 
   <!-- Offline: Local Music App Overlay -->
@@ -36073,6 +36347,710 @@ function openAlbum(albumId) {
     initVisualizerTrackCoverSync();
     setTimeout(attachTitleClick, 800);
   }
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------
+  // Playlist popup (ported from Playlist25App.html). Everything in
+  // this IIFE is namespaced with a pl25 prefix and operates on its
+  // own dedicated DOM elements/audio element, so it cannot collide
+  // with or affect any of this page's existing state or playback.
+  // ---------------------------------------------------------------
+
+  // ===== Track data (identical to Playlist25App.html) =====
+        const pl25FeaturedTracks = [
+            // Original featured tracks
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Me%20And%20You!%20Artist.%20Utopia.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Love%2CPeace%2CUnity_FULL_SONG_MusicGPT.mp3', artist: '', cover: '' },
+
+            // Prod. Tedla tracks
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Unity%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Tion%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Teddy%20Afro%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Sync%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Sweet%20Prod.%20Tedla.wav', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Nector%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Made%20It!%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Luv%20Me%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Country%20Prod.%20Tedla.wav', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Believe%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Astro.BET%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Space%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Nimbus%20Prod.%20Tedla.mp3', artist: 'Prod. Tedla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Mars.mp3', artist: 'Prod. Tedla', cover: '' },
+
+            // B Tilla / B-Tilla tracks
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Something%20Else.wav', artist: 'B Tilla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Honey%20Be%20Mine.mp3', artist: 'B-Tilla', cover: '' },
+
+            // Desiree tracks
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Teddy%20Tedla.wav', artist: 'Desiree', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Focus.wav', artist: 'Desiree', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Mind.wav', artist: 'Desiree', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Soul.wav', artist: 'Desiree', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Step.wav', artist: 'Desiree', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Promise.mp3', artist: 'Desiree', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Dream.wav', artist: 'Desiree', cover: '' },
+
+            // Bezzie tracks
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Lights.wav', artist: 'Bezzie', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Bootiful.wav', artist: 'Bezzie', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Vibin.wav', artist: 'Bezzie', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Vibes.mp3', artist: 'Bezzie', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Shine.wav', artist: 'Bezzie', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Rhymes.wav', artist: 'Bezzie', cover: '' },
+
+            // Texx tracks
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Where%20they%20at.mp3', artist: 'Texx', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Aint%20shit.mp3', artist: 'Texx', cover: '' },
+
+            // Molly-Able tracks
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Good%20Woman.wav', artist: 'Molly-Able', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/808-Symphony.mp3', artist: 'Molly-Able', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Whisper.wav', artist: 'Molly-Able', cover: '' },
+
+            // Other artists (one track each)
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Times.wav', artist: 'Stat Cross', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Prime.wav', artist: 'SlattZ', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Aint%20Nough%20Dreamzz.wav', artist: 'Stage Rolla', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Nexus.wav', artist: 'Prod. Nexus', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Mach%201.mp3', artist: 'Prod. Phantom', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Echo.wav', artist: 'Neon Gloww', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Smilin.wav', artist: 'Melody-Soull', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Persistence.wav', artist: 'Neo', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Smooth.wav', artist: 'Prod. 4EV', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Toon.wav', artist: 'Prod. Cool-Rhythms', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Wop!!!.mp3', artist: 'Klevv', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Huh.wav', artist: 'Prod. Legacy', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Future.wav', artist: 'Pegasus', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Bliss.mp3', artist: 'Echo', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Hustle.mp3', artist: 'NeoXX', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Heart.wav', artist: 'T-Glow', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Nova.wav', artist: 'Prod. Boltz', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Push%20It.wav', artist: 'B-Gallop', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Bright.wav', artist: 'Soul-Ful', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Lord.wav', artist: 'Sweet-Soul', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Smile.wav', artist: 'Amie-Rain', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Nights.wav', artist: 'Lil Guava', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/You%20My%20Vibe.wav', artist: 'Aime-Rain', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Consistency.wav', artist: 'StarLight', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Like%20Love.wav', artist: 'Pyro', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Shootin%20Starz%20Prod.%20Simz.mp3', artist: 'Prod. Simz', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/vision.mp3', artist: 'C-All', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/faith.mp3', artist: 'B-I-R-M-P', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/yettobe.mp3', artist: 'Bey-Erus', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Call.wav', artist: 'Prod. Echo', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Livid%20type%20beat.wav', artist: 'Prod. Lucid', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Divine.wav', artist: 'Sacred Sounds', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Shore.wav', artist: 'Prod. Wav', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Spittin.wav', artist: 'Prod. Jello', cover: '' },
+
+            // Generic tracks without specific artists
+            { url: 'https://storage.googleapis.com/hertz-music-folder/afro-dancehall-music.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/background-music.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/background-theme.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/background-upbeat.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/best-time-hip-hop.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/calm-mind.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/chill.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/eemotional-trap-beat.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/energetic-hip-hop.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/emotional-pop.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/for-her-chill-type-beat.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/hip-hop-music.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/lofi-chill.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/lofi-hiphop.mp3', artist: '', cover: '' },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/lofi-music.mp3', artist: '', cover: '' }
+       ];
+
+        // Tracks copied from the Hertz25AIpp.html Popular Tracks section, grouped into
+        // an artist-name album cover (via renderArtistFolders) with a popup of all tracks.
+        // Kept separate from pl25FeaturedTracks' flat grid via the fromPopularSection flag.
+        const pl25PopularSectionTracks = [
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Useda%20Care.mp3', title: 'Useda Care', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Pain%20For%20The%20Sake.mp3', title: 'Pain for the Sake', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Shocker.mp3', title: 'Shocker', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Pain%20Through%20Pain.mp3', title: 'Pain Through Pain', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Luh%20to%20Feel%20the%20Flow.mp3', title: 'Luh to Feel the Flow', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Wish%20Em%20All%20Well.mp3', title: 'Wish em all Well', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Pain%20Worth%20The%20Prize.mp3', title: 'Pain Worth a Prize', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Peace%20in%20Ya%20Heart.mp3', title: 'Peace in ya Heart', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Waitin%20Game%20(1).mp3', title: 'Waitin Game', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Try%20Like%20Dice.mp3', title: 'Try like Dice', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/I%20Hate%20U.mp3', title: 'I Hate You', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Turn%20Me%20Into%20A%20Monster%20(1).mp3', title: 'Monster', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Clinomania%20%26%20Anemoia.mp3', title: 'Clinomania', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Wake%20up%20Yall.mp3', title: 'Wake Up Yall', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Tinder%20Livid.mp3', title: 'Tinder Livid', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Little%20Bitch%20Elon.mp3', title: 'Little Bitch Elon', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Never%20Know%20Less.mp3', title: 'Never Know Less', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/thot-bull.mp3', title: 'Thot-Bull', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Cheese%20Got%20Me%20Shook.mp3', title: 'Cheese Got Me Shook', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Talkin%20Back%20in%20Time%20(4).mp3', title: 'Wantin Passed', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Pick%20Up%20Ya%20Phone.mp3', title: 'Pick Up ya Phone', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/No%20Good%20In%20My%20Genes%20(1).mp3', title: 'No Good in my Genes', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Pains%20All%20I%20Know%20(3).mp3', title: 'Pains All i Know', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Why%20Ya%20Need%20The%20Drug%20(1).mp3', title: 'Depression Not Real', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Everytime.mp3', title: 'Everytime', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Paradise.mp3', title: 'Paradise', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Come%20In%20Peace.mp3', title: 'Come in Peace', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Giggle.mp3', title: 'Giggle', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Could%20Be%20A%20Trip%20(1).mp3', title: 'Could Be a Trip', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Ask%20Before%20You%20Assume.mp3', title: 'Ask Before ya Assume', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Bounce%20That%20Ass.mp3', title: 'Bounce dat Ass', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Cold%20N%20Flu.mp3', title: 'Cold N Flu', artist: 'Beniam Tedla', album: 'Viz', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Keep%20Things%20Neat.mp3', title: 'Keepin things Neat', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Bitin%20Ya%20Lip.mp3', title: 'Bitin ya LipðŸ«¦', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Wan%20Feel%20the%20Glow.mp3', title: 'Wan Feel the Glow', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Dumbass%20Story.mp3', title: 'DumbAss Story', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Focus%20On%20Me%20(1).mp3', title: 'Focus On Me', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Bouta%20Jus%20Stop.mp3', title: 'Bouta Jus Stop', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Blast%20Off.mp3', title: 'Blast Off', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Silicon%20Ghost.mp3', title: 'Silicon Ghost', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Waves.mp3', title: 'Waves', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/No%20Heart.mp3', title: 'No HeartðŸ–¤', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Ride%20All%20Night%20(2).mp3', title: 'Ride all Night', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Call%20Me%20Cupid.mp3', title: 'Call Me Cupid', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Backstabber%20(1).mp3', title: 'Backstabber', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Floor%20Floorfloor%20(1).mp3', title: 'Tweak em Swift', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Moves%20Real%20Lit.mp3', title: 'Moves Real Lit', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Mars%20(2).mp3', title: 'FELON', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Dead%20to%20Me.mp3', title: 'Dead 2 Me', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Evil%20Pleasure%20(1).mp3', title: 'Evil', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Green%20Makes%20Them%20Fiend.mp3', title: 'Green Fiend', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Make%20Me%20Wanna%20Gleem.mp3', title: 'Wanna Gleem', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Ballin%20Wid%20The%20Rep.mp3', title: 'Ballin', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Salesman%20(2).mp3', title: 'Sell it', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Bruises%20%26%20Nooses.mp3', title: 'Bruises', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/AI%20Gonna%20Make%20Us%20Ball.mp3', title: 'AI gon make us Ball', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Brooke%20N%20Jewbel.mp3', title: 'Brooke n Jubal', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Liquor-Glass%20Lips.mp3', title: 'Liquor', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/What%27s%20Her%20Name_.mp3', title: 'What\'s Her Name?', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Sicka%20Bugs.mp3', title: 'Sicka Bugs', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Solid%20Night.mp3', title: 'Solid Night', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Cha-Ching.mp3', title: 'Cha-Ching', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Try%20To%20Play.mp3', title: 'Take a Swing', artist: 'Beniam Tedla', album: 'Cliche', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Find%20Me.mp3', title: 'Everytime - Cover', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Vinyl_Eyes_FULL_SONG_MusicGPT%20(1).mp3', title: 'Vinyl', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Ease%20Race.mp3', title: 'Ease Race', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Hi%20Smile%20%F0%9F%98%81.mp3', title: 'Hi Smile ðŸ˜', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Smoke.mp3', title: 'Smoke', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Matrix.mp3', title: 'Matrix', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Blood%20Train.mp3', title: 'Blood Train', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Glow%20Dior.mp3', title: 'Glow Dior', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Keys%20For%20Me.mp3', title: 'Keys For Me', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Be%20My%20Baby.mp3', title: 'Be My Baby', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/See%20her%20Happy.mp3', title: 'See her Happy', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Crown.mp3', title: 'Crown', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Peak%20My%20Interest.mp3', title: 'Peak My Interest', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Waitin%20to%20See.mp3', title: 'Waitin To See', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/3A.M.mp3', title: '3 AM', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Blicky%20Slap.mp3', title: 'Blicky Slap', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Won%27t%20Fold.mp3', title: 'Won\'t Fold', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Clip%20It.mp3', title: 'Clip It', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Physics%20Flex.mp3', title: 'Physics Flex', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Anti-Grav.mp3', title: 'Anti-Grav', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Course%20Correct.mp3', title: 'Course Correct', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Code_Is_Pure_FULL_SONG_MusicGPT.mp3', title: 'Pure Code', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/MF%20Rocket.mp3', title: 'MF Rocket', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Flex__Wealth_FULL_SONG_MusicGPT.mp3', title: 'Flex is Wealth', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Neat%20Rep.mp3', title: 'Neat Rep', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Feel%20Right.mp3', title: 'Feel Right', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Love%20It.mp3', title: 'Love It', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Teddy%20Tedla.wav', title: 'Love You Too', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/What%20You%20Know%20Bout%20Me.wav', title: 'What You Know Bout Me', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Honey%20Be%20Mine.mp3', title: 'Honey Be Mine', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Love%20Youuu%20Deep.mp3', title: 'Love You Deeep!!!', artist: 'Beniam Tedla', album: 'Wish', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/All%20Night.mp3', title: 'All Night', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Mag-Lev%20Charge.mp3', title: 'Mag-Lev Charge', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Scrollin.mp3', title: 'Scrollin', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Talk%20to%20Me.mp3', title: 'Talk to Me', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Biology_Heals_FULL_SONG_MusicGPT.mp3', title: 'Lambo-Ambo', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Sirens__Spark_FULL_SONG_MusicGPT.mp3', title: 'Sirens', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Stop_The_Spark_FULL_SONG_MusicGPT.mp3', title: 'Troops', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Heart-Lock.mp3', title: 'Heart-Lock', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Want%20it%20All.mp3', title: 'Want it All', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/watch.mp3', title: 'Watch', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Ride%20wid%20Me.mp3', title: 'Ride wid Me', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Purpose.mp3', title: 'Purpose', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/That%20Line.mp3', title: 'Stay on Me', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Sweet%20Cakes.mp3', title: 'Sweet Cakes', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Typhoon.mp3', title: 'Typhoon', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Persistence.wav', title: 'Persistence', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Focus.wav', title: 'Focus', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Smooth.wav', title: 'Smooth', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Toon.wav', title: 'Different', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Future.wav', title: 'Future', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Promise.mp3', title: 'Promise', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Bliss.mp3', title: 'Bliss', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Hustle.mp3', title: 'Hustle', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Golden%20Years.mp3', title: 'Golden Years', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Magic.mp3', title: 'Magic', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/In%20My%20Mind.mp3', title: 'In my Mind', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Want%20you%202.mp3', title: 'Want you 2', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Love%20at%20First%20Sight.mp3', title: 'Love @ First Sight', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Check%20Yelves.mp3', title: 'Check Yaselves', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Scarred%20or%20Dead%20(6).mp3', title: 'Scarred or Dead', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+            { url: 'https://storage.googleapis.com/hertz-music-folder/Movie%2043%20(2).mp3', title: 'Movie 43', artist: 'Beniam Tedla', album: 'Love', cover: '', fromPopularSection: true },
+        ];
+        pl25FeaturedTracks.push(...pl25PopularSectionTracks);
+
+
+  // ===== Track info resolution (same behavior as Playlist25App.html) =====
+  function pl25GetTrackInfo(url, trackObj) {
+    const fileName = decodeURIComponent(url.split('/').pop());
+    let name = fileName.replace(/\.(mp3|wav)$/i, '');
+    name = name.replace(/_?FULL[_ ]?SONG[_ ]?MusicGPT/i, '').replace(/_+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+
+    if (trackObj && trackObj.title) {
+      name = trackObj.title;
+    }
+
+    let artist = (trackObj && trackObj.artist) ? trackObj.artist : '';
+
+    if (!artist && /Prod\. Tedla/i.test(name)) {
+      artist = 'Prod. Tedla';
+      name = name.replace(/ ?Prod\. Tedla/i, '').replace(/!$/, '').trim();
+    }
+    if (!artist && /Teddy Afro Prod\. Tedla/i.test(fileName)) {
+      artist = 'Prod. Tedla';
+      name = 'Teddy Afro';
+    }
+    if (!artist && /Prod\. Simz/i.test(name)) {
+      artist = 'Prod. Simz';
+      name = name.replace(/ ?Prod\. Simz/i, '').trim();
+    }
+
+    return { name, artist, url };
+  }
+
+  const pl25HzLogoDataUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzAwMDAwMCIvPgogIDxnIGZpbGw9IiNGRkQ3MDAiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSI4MCIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj4KICAgIDx0ZXh0IHg9IjEwMCIgeT0iMTAwIj5IWjwvdGV4dD4KICA8L2c+Cjwvc3ZnPg==';
+
+  // ===== Render Artist Albums grid (groups by album when present, else by artist) =====
+  function pl25RenderArtistFolders() {
+    const grid = document.getElementById('pl25ArtistFoldersGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    const groups = {};
+    pl25FeaturedTracks.forEach((trackObj, idx) => {
+      const track = pl25GetTrackInfo(trackObj.url, trackObj);
+      if (track.artist && track.artist.trim() !== '') {
+        const groupKey = trackObj.album ? trackObj.album : track.artist;
+        if (!groups[groupKey]) {
+          groups[groupKey] = { tracks: [], isAlbum: !!trackObj.album, artistName: track.artist };
+        }
+        groups[groupKey].tracks.push({ ...track, originalIndex: idx });
+      }
+    });
+
+    Object.keys(groups).sort((a, b) => groups[b].tracks.length - groups[a].tracks.length).forEach(groupKey => {
+      const group = groups[groupKey];
+      const tracks = group.tracks;
+      const displayTitle = groupKey;
+
+      const folderCard = document.createElement('div');
+      folderCard.style.cssText = 'background:#232526;border-radius:22px;box-shadow:0 2px 8px rgba(0,0,0,0.10);padding:1.1rem 0.7rem;display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.18s;width:100%;max-width:180px;min-width:130px;';
+
+      const artistLine = group.isAlbum
+        ? `<div style="font-size:0.85rem;color:#b3b3b3;text-align:center;margin-bottom:0.2rem;">${group.artistName}</div>`
+        : '';
+
+      folderCard.innerHTML = `
+        <div style="position:relative;">
+          <img src="${pl25HzLogoDataUrl}" alt="${displayTitle}" style="width:90px;height:90px;border-radius:20px;margin-bottom:0.7rem;object-fit:cover;box-shadow:0 2px 8px rgba(255,215,0,0.3);border:2px solid gold;">
+          <div style="position:absolute;top:5px;right:5px;background:rgba(255,215,0,0.9);color:#000;font-size:0.75rem;font-weight:700;padding:2px 6px;border-radius:8px;">${tracks.length}</div>
+        </div>
+        <div style="font-weight:600;color:gold;font-size:1rem;text-align:center;margin-bottom:0.3rem;">${displayTitle}</div>
+        ${artistLine}
+        <div style="font-size:0.85rem;color:#b3b3b3;text-align:center;">${tracks.length} track${tracks.length > 1 ? 's' : ''}</div>
+      `;
+
+      folderCard.addEventListener('click', function () {
+        pl25ShowArtistPopup(displayTitle, tracks);
+      });
+      folderCard.addEventListener('mouseover', function () { folderCard.style.transform = 'scale(1.05)'; });
+      folderCard.addEventListener('mouseout', function () { folderCard.style.transform = 'scale(1)'; });
+
+      grid.appendChild(folderCard);
+    });
+  }
+
+  // ===== Show the track list popup for a clicked album/artist =====
+  function pl25ShowArtistPopup(title, tracks) {
+    const modal = document.getElementById('pl25ArtistPopupModal');
+    const titleEl = document.getElementById('pl25ArtistPopupTitle');
+    const tracksGrid = document.getElementById('pl25ArtistTracksGrid');
+    if (!modal || !titleEl || !tracksGrid) return;
+
+    titleEl.textContent = title;
+    tracksGrid.innerHTML = '';
+
+    tracks.forEach(track => {
+      const trackCard = document.createElement('div');
+      trackCard.className = 'pl25-artist-track-card';
+      trackCard.innerHTML = `
+        <img src="${pl25HzLogoDataUrl}" alt="${track.name}">
+        <div class="pl25-artist-track-name">${track.name}</div>
+      `;
+      trackCard.addEventListener('click', function () {
+        pl25EnableAutoplay();
+        pl25LoadTrack(track.originalIndex, true);
+        modal.style.display = 'none';
+      });
+      tracksGrid.appendChild(trackCard);
+    });
+
+    modal.style.display = 'block';
+  }
+
+  // ===== Dedicated mini player state/engine (fully self-contained) =====
+  let pl25CurrentIndex = 0;
+  let pl25IsPlaying = false;
+  let pl25IsLoop = false;
+  let pl25IsShuffle = false;
+  let pl25UserHasInteracted = false;
+  let pl25AutoplayRetried = false;
+  let pl25AutoplayTimeout = null;
+
+  const pl25StickyPlayer = document.getElementById('pl25StickyPlayer');
+  const pl25PlayerAudio = document.getElementById('pl25PlayerAudio');
+  const pl25PlayerTrackTitle = document.getElementById('pl25PlayerTrackTitle');
+  const pl25PlayPauseBtn = document.getElementById('pl25PlayPauseBtn');
+  const pl25PrevBtn = document.getElementById('pl25PrevBtn');
+  const pl25NextBtn = document.getElementById('pl25NextBtn');
+  const pl25LoopBtn = document.getElementById('pl25LoopBtn');
+  const pl25ShuffleBtn = document.getElementById('pl25ShuffleBtn');
+  const pl25ProgressBar = document.getElementById('pl25ProgressBar');
+  const pl25CurrentTimeSpan = document.getElementById('pl25CurrentTime');
+  const pl25DurationSpan = document.getElementById('pl25Duration');
+  const pl25LikeBtn = document.getElementById('pl25LikeBtn');
+  const pl25LyricsBtn = document.getElementById('pl25LyricsBtn');
+
+  function pl25ShowStatus(message) {
+    let toast = document.getElementById('pl25StatusToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'pl25StatusToast';
+      toast.style.cssText = 'position:fixed;left:50%;bottom:140px;transform:translateX(-50%);background:#232526;color:#FFD700;padding:8px 18px;border-radius:20px;font-size:0.85rem;z-index:3900;box-shadow:0 4px 12px rgba(0,0,0,0.4);border:1px solid gold;transition:opacity 0.3s;opacity:0;pointer-events:none;';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    clearTimeout(toast._hideTimeout);
+    toast._hideTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 1800);
+  }
+
+  function pl25EnableAutoplay() {
+    if (!pl25UserHasInteracted) {
+      pl25UserHasInteracted = true;
+      try {
+        const silentAudio = new Audio();
+        silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAAAQQBgADAADAAxAAEAAEEiSgLDUAAA';
+        silentAudio.volume = 0;
+        silentAudio.play().catch(() => {});
+      } catch (e) {}
+    }
+  }
+
+  function pl25FormatTime(sec) {
+    sec = Math.floor(sec || 0);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function pl25AttemptAutoplay() {
+    if (pl25AutoplayTimeout) clearTimeout(pl25AutoplayTimeout);
+    if (!pl25UserHasInteracted) return;
+    if (pl25PlayerAudio.readyState < 2) {
+      pl25AutoplayTimeout = setTimeout(() => {
+        if (pl25PlayerAudio.dataset.shouldAutoplay === 'true') pl25AttemptAutoplay();
+      }, 200);
+      return;
+    }
+    pl25PlayerAudio.play().then(() => {
+      pl25PlayPauseBtn.innerHTML = '&#10073;&#10073;';
+      pl25IsPlaying = true;
+      pl25PlayerAudio.dataset.shouldAutoplay = 'false';
+    }).catch(() => {
+      pl25PlayPauseBtn.innerHTML = '&#10073;&#10073;';
+      pl25IsPlaying = true;
+      if (!pl25AutoplayRetried) {
+        pl25AutoplayRetried = true;
+        pl25AutoplayTimeout = setTimeout(() => {
+          if (pl25PlayerAudio.dataset.shouldAutoplay === 'true') {
+            pl25PlayerAudio.play().then(() => {
+              pl25PlayPauseBtn.innerHTML = '&#10073;&#10073;';
+              pl25PlayerAudio.dataset.shouldAutoplay = 'false';
+              pl25AutoplayRetried = false;
+            }).catch(() => {
+              pl25PlayPauseBtn.innerHTML = '&#9654;';
+              pl25PlayerAudio.dataset.shouldAutoplay = 'false';
+              pl25AutoplayRetried = false;
+            });
+          }
+        }, 1000);
+      } else {
+        pl25PlayerAudio.dataset.shouldAutoplay = 'false';
+      }
+    });
+  }
+
+  function pl25LoadTrack(idx, autoplay) {
+    if (!pl25FeaturedTracks[idx] || !pl25FeaturedTracks[idx].url) return;
+
+    pl25StickyPlayer.style.display = 'flex';
+    const track = pl25GetTrackInfo(pl25FeaturedTracks[idx].url, pl25FeaturedTracks[idx]);
+
+    if (!pl25PlayerAudio.paused) pl25PlayerAudio.pause();
+    if (pl25AutoplayTimeout) clearTimeout(pl25AutoplayTimeout);
+    pl25AutoplayRetried = false;
+
+    pl25PlayerAudio.src = track.url;
+    pl25PlayerTrackTitle.textContent = track.name;
+    pl25CurrentIndex = idx;
+    pl25ProgressBar.value = 0;
+    pl25CurrentTimeSpan.textContent = '0:00';
+    pl25DurationSpan.textContent = '0:00';
+    pl25PlayerAudio.dataset.shouldAutoplay = autoplay ? 'true' : 'false';
+    pl25PlayerAudio.volume = 0.7;
+
+    if (autoplay) {
+      pl25PlayPauseBtn.innerHTML = '&#10073;&#10073;';
+      pl25IsPlaying = true;
+    } else {
+      pl25PlayPauseBtn.innerHTML = '&#9654;';
+      pl25IsPlaying = false;
+    }
+
+    const trackId = `track_${idx}_${track.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const likedTracksObj = JSON.parse(localStorage.getItem('hertzLikedTracks') || '{}');
+    if (likedTracksObj[trackId]) {
+      pl25LikeBtn.classList.add('liked');
+    } else {
+      pl25LikeBtn.classList.remove('liked');
+    }
+
+    pl25PlayerAudio.load();
+
+    if (autoplay) {
+      setTimeout(pl25AttemptAutoplay, 50);
+      setTimeout(() => { if (pl25PlayerAudio.dataset.shouldAutoplay === 'true') pl25AttemptAutoplay(); }, 500);
+      setTimeout(() => { if (pl25PlayerAudio.dataset.shouldAutoplay === 'true') pl25AttemptAutoplay(); }, 1000);
+    }
+  }
+
+  function pl25PlayPause() {
+    if (!pl25FeaturedTracks[pl25CurrentIndex] || !pl25FeaturedTracks[pl25CurrentIndex].url) return;
+    pl25EnableAutoplay();
+    if (pl25IsPlaying) {
+      pl25PlayerAudio.pause();
+      pl25PlayPauseBtn.innerHTML = '&#9654;';
+      pl25IsPlaying = false;
+    } else {
+      pl25PlayerAudio.play().then(() => {
+        pl25PlayPauseBtn.innerHTML = '&#10073;&#10073;';
+        pl25IsPlaying = true;
+      }).catch(() => {
+        pl25PlayPauseBtn.innerHTML = '&#9654;';
+        pl25IsPlaying = false;
+      });
+    }
+  }
+
+  function pl25PlayNext() {
+    if (pl25IsLoop) {
+      pl25PlayerAudio.currentTime = 0;
+      pl25PlayerAudio.play().catch(() => {});
+      return;
+    }
+    if (pl25IsShuffle) {
+      let nextIdx = Math.floor(Math.random() * pl25FeaturedTracks.length);
+      if (pl25FeaturedTracks.length > 1 && nextIdx === pl25CurrentIndex) {
+        nextIdx = (nextIdx + 1) % pl25FeaturedTracks.length;
+      }
+      pl25CurrentIndex = nextIdx;
+    } else {
+      pl25CurrentIndex = (pl25CurrentIndex + 1) % pl25FeaturedTracks.length;
+    }
+    pl25LoadTrack(pl25CurrentIndex, true);
+  }
+
+  function pl25PlayPrev() {
+    if (pl25IsLoop) {
+      pl25PlayerAudio.currentTime = 0;
+      pl25PlayerAudio.play().catch(() => {});
+      return;
+    }
+    if (pl25IsShuffle) {
+      let prevIdx = Math.floor(Math.random() * pl25FeaturedTracks.length);
+      if (pl25FeaturedTracks.length > 1 && prevIdx === pl25CurrentIndex) {
+        prevIdx = (prevIdx - 1 + pl25FeaturedTracks.length) % pl25FeaturedTracks.length;
+      }
+      pl25CurrentIndex = prevIdx;
+    } else {
+      pl25CurrentIndex = (pl25CurrentIndex - 1 + pl25FeaturedTracks.length) % pl25FeaturedTracks.length;
+    }
+    pl25LoadTrack(pl25CurrentIndex, true);
+  }
+
+  function pl25ToggleLoop() {
+    pl25IsLoop = !pl25IsLoop;
+    pl25PlayerAudio.loop = pl25IsLoop;
+    pl25LoopBtn.style.color = pl25IsLoop ? '#1db954' : '#fff';
+  }
+
+  function pl25ToggleShuffle() {
+    pl25IsShuffle = !pl25IsShuffle;
+    pl25ShuffleBtn.style.color = pl25IsShuffle ? '#1db954' : '#fff';
+  }
+
+  function pl25ToggleLike() {
+    if (!pl25FeaturedTracks[pl25CurrentIndex]) return;
+    const track = pl25GetTrackInfo(pl25FeaturedTracks[pl25CurrentIndex].url, pl25FeaturedTracks[pl25CurrentIndex]);
+    const trackId = `track_${pl25CurrentIndex}_${track.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    try {
+      let likedTracksObj = JSON.parse(localStorage.getItem('hertzLikedTracks') || '{}');
+      const isCurrentlyLiked = likedTracksObj[trackId];
+
+      if (isCurrentlyLiked) {
+        delete likedTracksObj[trackId];
+        pl25LikeBtn.classList.remove('liked');
+        pl25ShowStatus(`Removed "${track.name}" from liked tracks`);
+      } else {
+        likedTracksObj[trackId] = { name: track.name, artist: track.artist, url: track.url, likedAt: Date.now() };
+        pl25LikeBtn.classList.add('liked');
+        pl25ShowStatus(`Added "${track.name}" to liked tracks`);
+      }
+
+      localStorage.setItem('hertzLikedTracks', JSON.stringify(likedTracksObj));
+    } catch (e) {
+      console.error('Playlist popup: failed to toggle like', e);
+    }
+  }
+
+  // ===== Lyrics button (reuses the home page's existing shared lyrics panel/logic
+  // exactly, by temporarily pointing its global "current track" lookup at whichever
+  // track is playing in this popup, then restoring it immediately afterward so the
+  // rest of the app's state is never left altered). =====
+  function pl25ToggleLyrics() {
+    if (typeof window.toggleLyricsPanel !== 'function') return;
+
+    const trackObj = pl25FeaturedTracks[pl25CurrentIndex];
+    if (!trackObj || !trackObj.url) {
+      window.toggleLyricsPanel();
+      return;
+    }
+    const track = pl25GetTrackInfo(trackObj.url, trackObj);
+
+    // Save whatever the home page currently has set, so we can restore it after.
+    const savedTrackData = window.currentTrackData;
+    const savedTrack = window.currentTrack;
+    const savedTrackId = window.currentTrackId;
+
+    window.currentTrackData = {
+      id: track.name, trackId: track.name,
+      url: track.url,
+      title: track.name, trackTitle: track.name, name: track.name,
+      artist: track.artist, trackArtist: track.artist
+    };
+    window.currentTrack = { trackId: track.name, trackUrl: track.url, trackTitle: track.name, trackArtist: track.artist };
+    window.currentTrackId = track.name;
+
+    window.toggleLyricsPanel();
+
+    // Restore immediately: renderLyricsForTrack already captured the track info
+    // above as plain function arguments before this line runs, so this cannot
+    // affect what gets shown in the panel.
+    window.currentTrackData = savedTrackData;
+    window.currentTrack = savedTrack;
+    window.currentTrackId = savedTrackId;
+
+    const panel = document.getElementById('lyricsPanel');
+    if (pl25LyricsBtn && panel) {
+      pl25LyricsBtn.classList.toggle('active', panel.classList.contains('open'));
+    }
+  }
+
+  // ===== Event wiring (all scoped to this popup's own elements) =====
+  pl25PlayPauseBtn.addEventListener('click', pl25PlayPause);
+  pl25PrevBtn.addEventListener('click', function () { pl25EnableAutoplay(); pl25PlayPrev(); });
+  pl25NextBtn.addEventListener('click', function () { pl25EnableAutoplay(); pl25PlayNext(); });
+  pl25LoopBtn.addEventListener('click', pl25ToggleLoop);
+  pl25ShuffleBtn.addEventListener('click', pl25ToggleShuffle);
+  pl25LikeBtn.addEventListener('click', pl25ToggleLike);
+  if (pl25LyricsBtn) pl25LyricsBtn.addEventListener('click', pl25ToggleLyrics);
+
+  pl25PlayerAudio.addEventListener('timeupdate', function () {
+    if (!pl25PlayerAudio.duration) return;
+    pl25ProgressBar.value = (pl25PlayerAudio.currentTime / pl25PlayerAudio.duration) * 100;
+    pl25CurrentTimeSpan.textContent = pl25FormatTime(pl25PlayerAudio.currentTime);
+    pl25DurationSpan.textContent = pl25FormatTime(pl25PlayerAudio.duration);
+  });
+  pl25PlayerAudio.addEventListener('play', function () { pl25PlayPauseBtn.innerHTML = '&#10073;&#10073;'; pl25IsPlaying = true; });
+  pl25PlayerAudio.addEventListener('pause', function () { pl25PlayPauseBtn.innerHTML = '&#9654;'; pl25IsPlaying = false; });
+  pl25PlayerAudio.addEventListener('ended', function () {
+    if (pl25IsLoop) {
+      pl25PlayerAudio.currentTime = 0;
+      pl25PlayerAudio.play().catch(() => {});
+    } else {
+      pl25PlayNext();
+    }
+  });
+  pl25PlayerAudio.addEventListener('canplaythrough', function () {
+    if (this.dataset.shouldAutoplay === 'true' && pl25UserHasInteracted) pl25AttemptAutoplay();
+  });
+  pl25ProgressBar.addEventListener('input', function () {
+    if (!pl25PlayerAudio.duration) return;
+    pl25PlayerAudio.currentTime = (pl25ProgressBar.value / 100) * pl25PlayerAudio.duration;
+  });
+
+  // Close the artist/album track popup
+  const pl25CloseArtistPopupBtn = document.getElementById('pl25CloseArtistPopup');
+  const pl25ArtistModal = document.getElementById('pl25ArtistPopupModal');
+  if (pl25CloseArtistPopupBtn && pl25ArtistModal) {
+    pl25CloseArtistPopupBtn.addEventListener('click', function () { pl25ArtistModal.style.display = 'none'; });
+    pl25ArtistModal.addEventListener('click', function (e) {
+      if (e.target === pl25ArtistModal) pl25ArtistModal.style.display = 'none';
+    });
+  }
+
+  // Close the main Playlist popup if clicking its backdrop (consistent with Online/Offline popups)
+  const pl25AppOverlayEl = document.getElementById('pl25AppOverlay');
+  if (pl25AppOverlayEl) {
+    pl25AppOverlayEl.addEventListener('click', function (e) {
+      if (e.target === pl25AppOverlayEl) window.closePlaylistApp();
+    });
+  }
+
+  let pl25Initialized = false;
+
+  // ===== Public entry points (the only globals this feature exposes) =====
+  window.openPlaylistApp = function () {
+    if (typeof closeAppSelectionPopup === 'function') closeAppSelectionPopup();
+    const overlay = document.getElementById('pl25AppOverlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+      if (!pl25Initialized) {
+        pl25Initialized = true;
+        pl25RenderArtistFolders();
+      }
+    }
+  };
+
+  window.closePlaylistApp = function () {
+    const overlay = document.getElementById('pl25AppOverlay');
+    if (overlay) overlay.style.display = 'none';
+    const popup = document.getElementById('pl25ArtistPopupModal');
+    if (popup) popup.style.display = 'none';
+  };
 })();
 </script>
 
