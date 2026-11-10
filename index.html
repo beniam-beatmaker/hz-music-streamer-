@@ -34941,14 +34941,30 @@ function openAlbum(albumId) {
       <button onclick="window.closeCubeVisualizer && window.closeCubeVisualizer()" style="background:none;border:none;color:#b9fff1;font-size:1.1rem;cursor:pointer;line-height:1;opacity:0.76;" title="Close">✕</button>
     </div>
 
-    <div style="width:100%;display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:4px;">
-      <button id="cubeVisualizerUploadBtn" type="button" style="background:rgba(84,246,228,0.12);border:1px solid rgba(132,255,236,0.42);color:#b9fff1;font-size:0.68rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;border-radius:999px;padding:6px 12px;cursor:pointer;">Upload Image</button>
+    <div id="cubeVisualizerModeTabs" style="width:100%;display:flex;justify-content:center;align-items:flex-end;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+      <button id="cubeVisualizerLoopModeBtn" type="button" style="background:rgba(84,246,228,0.35);border:1px solid rgba(132,255,236,0.42);color:#b9fff1;font-size:0.64rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border-radius:999px;padding:6px 11px;cursor:pointer;">Psychedelic Loop</button>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+        <span style="color:#b9fff1;font-size:0.58rem;font-weight:600;letter-spacing:0.03em;opacity:0.85;white-space:nowrap;">Add Your AI Videos n Enjoy</span>
+        <button id="cubeVisualizerUploadBtn" type="button" style="background:rgba(84,246,228,0.12);border:1px solid rgba(132,255,236,0.42);color:#b9fff1;font-size:0.64rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border-radius:999px;padding:6px 11px;cursor:pointer;">Add Files</button>
+      </div>
+      <button id="cubeVisualizerVideoModeBtn" type="button" style="background:rgba(84,246,228,0.12);border:1px solid rgba(132,255,236,0.42);color:#b9fff1;font-size:0.64rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border-radius:999px;padding:6px 11px;cursor:pointer;">Video</button>
       <input id="cubeVisualizerImageInput" type="file" accept="image/*" style="display:none;">
+    </div>
+
+    <div id="cubeVisualizerVideoControls" style="width:100%;display:none;justify-content:center;align-items:center;gap:8px;margin-bottom:4px;">
+      <button id="cubeVisualizerAddVideoBtn" type="button" style="background:rgba(84,246,228,0.12);border:1px solid rgba(132,255,236,0.42);color:#b9fff1;font-size:0.64rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border-radius:999px;padding:6px 11px;cursor:pointer;">Add Video</button>
+      <button id="cubeVisualizerAddVideoUrlBtn" type="button" style="background:rgba(84,246,228,0.12);border:1px solid rgba(132,255,236,0.42);color:#b9fff1;font-size:0.64rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border-radius:999px;padding:6px 11px;cursor:pointer;">Add URL</button>
+      <input id="cubeVisualizerVideoFileInput" type="file" accept="video/*" style="display:none;">
     </div>
 
     <div id="envWaveScene" style="width:236px;height:236px;position:relative;display:flex;align-items:center;justify-content:center;border-radius:50%;overflow:hidden;border:1.5px solid rgba(150,246,255,0.38);background:radial-gradient(circle at 50% 50%,rgba(72,255,234,0.14),rgba(8,8,12,0.98) 72%);box-shadow:inset 0 0 24px rgba(146,255,242,0.1),0 0 28px rgba(95,232,255,0.17);flex:0 0 auto;">
       <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(90,255,228,0.2),rgba(90,255,228,0) 62%);"></div>
       <canvas id="envWaveCanvas" width="236" height="236" style="width:236px;height:236px;display:block;border-radius:50%;filter:drop-shadow(0 0 12px rgba(126,255,236,0.35)) drop-shadow(0 0 32px rgba(120,220,255,0.22));"></canvas>
+    </div>
+
+    <div id="cubeVisualizerVideoScene" style="width:236px;height:236px;position:relative;display:none;align-items:center;justify-content:center;border-radius:16px;overflow:hidden;border:1.5px solid rgba(150,246,255,0.38);background:radial-gradient(circle at 50% 50%,rgba(72,255,234,0.14),rgba(8,8,12,0.98) 72%);box-shadow:inset 0 0 24px rgba(146,255,242,0.1),0 0 28px rgba(95,232,255,0.17);flex:0 0 auto;">
+      <video id="cubeVisualizerVideo" style="width:236px;height:236px;display:block;object-fit:cover;border-radius:16px;background:#000;" playsinline loop controls></video>
+      <div id="cubeVisualizerVideoEmptyHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:#b9fff1;font-size:0.68rem;font-weight:600;opacity:0.72;letter-spacing:0.03em;pointer-events:none;">Add a video to stream it here</div>
     </div>
 
     <div id="cubeVisualizerLabel" style="color:#b9fff1;font-size:0.7rem;font-weight:600;opacity:0.78;letter-spacing:0.05em;">—</div>
@@ -35192,6 +35208,117 @@ function openAlbum(albumId) {
         input.value = '';
       };
       reader.readAsDataURL(file);
+    });
+  }
+
+  var _vizDisplayMode = 'loop';
+  var _vizVideoObjectUrl = null;
+
+  function switchVisualizerMode(mode) {
+    _vizDisplayMode = mode === 'video' ? 'video' : 'loop';
+    var loopScene = document.getElementById('envWaveScene');
+    var videoScene = document.getElementById('cubeVisualizerVideoScene');
+    var videoControls = document.getElementById('cubeVisualizerVideoControls');
+    var loopBtn = document.getElementById('cubeVisualizerLoopModeBtn');
+    var videoBtn = document.getElementById('cubeVisualizerVideoModeBtn');
+    var videoEl = document.getElementById('cubeVisualizerVideo');
+    var activeStyle = 'rgba(84,246,228,0.35)';
+    var inactiveStyle = 'rgba(84,246,228,0.12)';
+
+    if (_vizDisplayMode === 'video') {
+      if (loopScene) loopScene.style.display = 'none';
+      if (videoScene) videoScene.style.display = 'flex';
+      if (videoControls) videoControls.style.display = 'flex';
+      if (loopBtn) loopBtn.style.background = inactiveStyle;
+      if (videoBtn) videoBtn.style.background = activeStyle;
+    } else {
+      if (videoScene) videoScene.style.display = 'none';
+      if (videoControls) videoControls.style.display = 'none';
+      if (loopScene) loopScene.style.display = 'flex';
+      if (loopBtn) loopBtn.style.background = activeStyle;
+      if (videoBtn) videoBtn.style.background = inactiveStyle;
+      if (videoEl && !videoEl.paused) {
+        try { videoEl.pause(); } catch (pauseErr) {}
+      }
+    }
+  }
+  window.switchCubeVisualizerMode = switchVisualizerMode;
+
+  function loadCubeVisualizerVideo(src, isObjectUrl) {
+    var videoEl = document.getElementById('cubeVisualizerVideo');
+    var hint = document.getElementById('cubeVisualizerVideoEmptyHint');
+    if (!videoEl || !src) return;
+
+    var previousObjectUrl = _vizVideoObjectUrl;
+    _vizVideoObjectUrl = isObjectUrl ? src : null;
+
+    videoEl.src = src;
+    videoEl.loop = true;
+    videoEl.load();
+    if (hint) hint.style.display = 'none';
+    switchVisualizerMode('video');
+    videoEl.play().catch(function() {});
+
+    if (previousObjectUrl && previousObjectUrl !== src) {
+      try { URL.revokeObjectURL(previousObjectUrl); } catch (revokeErr) {}
+    }
+  }
+
+  function initVisualizerModeTabs() {
+    var loopBtn = document.getElementById('cubeVisualizerLoopModeBtn');
+    var videoBtn = document.getElementById('cubeVisualizerVideoModeBtn');
+    if (loopBtn && loopBtn.dataset.boundMode !== 'true') {
+      loopBtn.dataset.boundMode = 'true';
+      loopBtn.addEventListener('click', function(event) {
+        event.stopPropagation();
+        switchVisualizerMode('loop');
+      });
+    }
+    if (videoBtn && videoBtn.dataset.boundMode !== 'true') {
+      videoBtn.dataset.boundMode = 'true';
+      videoBtn.addEventListener('click', function(event) {
+        event.stopPropagation();
+        switchVisualizerMode('video');
+      });
+    }
+  }
+
+  function initVisualizerVideoUpload() {
+    var addVideoBtn = document.getElementById('cubeVisualizerAddVideoBtn');
+    var addUrlBtn = document.getElementById('cubeVisualizerAddVideoUrlBtn');
+    var videoInput = document.getElementById('cubeVisualizerVideoFileInput');
+    if (!addVideoBtn || !addUrlBtn || !videoInput || addVideoBtn.dataset.boundVideo === 'true') return;
+    addVideoBtn.dataset.boundVideo = 'true';
+
+    addVideoBtn.addEventListener('click', function(event) {
+      event.stopPropagation();
+      videoInput.click();
+    });
+
+    videoInput.addEventListener('change', function(event) {
+      var file = event.target && event.target.files ? event.target.files[0] : null;
+      if (!file) return;
+
+      if (!file.type || !file.type.startsWith('video/')) {
+        if (typeof showTemporaryMessage === 'function') {
+          showTemporaryMessage('Please choose a video file.');
+        }
+        videoInput.value = '';
+        return;
+      }
+
+      var objectUrl = URL.createObjectURL(file);
+      loadCubeVisualizerVideo(objectUrl, true);
+      videoInput.value = '';
+    });
+
+    addUrlBtn.addEventListener('click', function(event) {
+      event.stopPropagation();
+      var url = window.prompt('Enter a copyright-free video URL:', '');
+      if (!url) return;
+      url = url.trim();
+      if (!url) return;
+      loadCubeVisualizerVideo(url);
     });
   }
 
@@ -36376,12 +36503,16 @@ function openAlbum(albumId) {
     document.addEventListener('DOMContentLoaded', startStickyWaveBadge);
     document.addEventListener('DOMContentLoaded', startStickyAreaWatcher);
     document.addEventListener('DOMContentLoaded', initVisualizerImageUpload);
+    document.addEventListener('DOMContentLoaded', initVisualizerModeTabs);
+    document.addEventListener('DOMContentLoaded', initVisualizerVideoUpload);
     document.addEventListener('DOMContentLoaded', initVisualizerTrackCoverSync);
   } else {
     attachTitleClick();
     startStickyWaveBadge();
     startStickyAreaWatcher();
     initVisualizerImageUpload();
+    initVisualizerModeTabs();
+    initVisualizerVideoUpload();
     initVisualizerTrackCoverSync();
     setTimeout(attachTitleClick, 800);
   }
